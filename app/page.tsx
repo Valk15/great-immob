@@ -58,12 +58,14 @@ const T = {
       messageLabel: "Détails supplémentaires (optionnel)",
       messagePlaceholder: "Étage, ascenseur, état du bien, disponibilité...",
       reveal: "Recevoir mon rapport complet", back: "← Modifier",
-      // New Teaser Text
-      successTitle: "Demande Reçue !",
-      successSub: "Analyse en cours...",
-      step1: "Analyse du quartier", step2: "Comparatif Airbnb/Booking", step3: "Calcul du taux d'occupation",
-      finalMsg: "Votre estimation approximative est prête. Pour éviter les fausses promesses, Hamza finalise le rapport détaillé et vous l'envoie sur WhatsApp.",
-      waBtn: "Contacter Hamza maintenant →",
+      successTitle: "Analyse en cours !",
+      successSub: "Données bien reçues.",
+      estTitle: "Augmentation Estimée",
+      estRange: "+60% à +120%",
+      estSub: "Par rapport à une location classique",
+      finalMsg: "Ce chiffre est une moyenne du marché. Pour votre bien, nous utilisons des outils professionnels pour calculer le prix exact à la nuitée.",
+      ctaAction: "Hamza finalise votre rapport PDF personnalisé. Surveillez votre WhatsApp !",
+      waBtn: "Discuter avec Hamza maintenant →",
       sending: "Envoi en cours...", sent: "✓ Données envoyées",
     },
     legal: {
@@ -124,11 +126,14 @@ const T = {
       messageLabel: "Additional details (optional)",
       messagePlaceholder: "Floor, elevator, property condition, availability...",
       reveal: "Receive my full report", back: "← Edit",
-      successTitle: "Request Received!",
-      successSub: "Analysis in progress...",
-      step1: "Neighborhood analysis", step2: "Airbnb/Booking comparison", step3: "Occupancy rate calculation",
-      finalMsg: "Your approximate estimate is ready. To avoid false promises, Hamza is finalizing the detailed report and will send it to you on WhatsApp.",
-      waBtn: "Contact Hamza now →",
+      successTitle: "Analysis in progress!",
+      successSub: "Data received successfully.",
+      estTitle: "Estimated Increase",
+      estRange: "+60% to +120%",
+      estSub: "Compared to standard rental",
+      finalMsg: "This is a market average. For your specific property, we use professional tools to calculate the exact nightly rate.",
+      ctaAction: "Hamza is finalizing your custom PDF report. Check your WhatsApp!",
+      waBtn: "Chat with Hamza now →",
       sending: "Sending...", sent: "✓ Data sent",
     },
     legal: {
@@ -189,10 +194,13 @@ const T = {
       messageLabel: "تفاصيل إضافية (اختياري)",
       messagePlaceholder: "الطابق، المصعد، حالة العقار، التوفر...",
       reveal: "استلام تقريري الكامل", back: "← تعديل",
-      successTitle: "تم استلام الطلب!",
-      successSub: "جارٍ تحليل البيانات...",
-      step1: "تحليل الحي السكني", step2: "مقارنة الأسعار (Airbnb/Booking)", step3: "حساب معدل الإشغال المتوقع",
-      finalMsg: "تقديرك التقريبي جاهز. لتجنب الوعود الكاذبة، يقوم حمزة بإنهاء التقرير المفصل وسيرسله لك عبر واتساب.",
+      successTitle: "جارٍ تحليل البيانات...",
+      successSub: "تم استلام طلبك بنجاح.",
+      estTitle: "زيادة متوقعة",
+      estRange: "+60% إلى +120%",
+      estSub: "مقارنة بالإيجار التقليدي",
+      finalMsg: "هذه النسبة هي متوسط السوق. بالنسبة لعقارك، نحن نستخدم أدوات احترافية لحساب السعر الدقيق لليلة.",
+      ctaAction: "يقوم حمزة الآن بإعداد تقرير PDF المخصص لك. راقب الواتساب!",
       waBtn: "تواصل مع حمزة الآن ←",
       sending: "جارٍ الإرسال...", sent: "✓ تم الإرسال",
     },
@@ -495,7 +503,7 @@ function RealReviews({ lang }: { lang: Lang }) {
   );
 }
 
-// --- UPDATED CALCULATOR (TEASER LOGIC) ---
+// --- FINAL FIXED CALCULATOR ---
 function Calculator({ lang }: { lang: Lang }) {
   const t = T[lang].calc;
   const [quartier, setQuartier] = useState("");
@@ -504,7 +512,6 @@ function Calculator({ lang }: { lang: Lang }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
-  // We remove 'result' state because we won't show numbers
   const [submitState, setSubmitState] = useState<"idle" | "sending" | "sent">("idle");
 
   const canStep1 = quartier.trim().length >= 2 && type;
@@ -515,8 +522,9 @@ function Calculator({ lang }: { lang: Lang }) {
     try {
       await fetch(SHEETS_URL, {
         method: "POST", mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, quartier, type, estimation: "Teaser Requested", message }),
+        // !!! CRITICAL FIX: text/plain to bypass Google blocking !!!
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ name, phone, quartier, type, estimation: "Requested Estimate (+60-120%)", message }),
       });
     } catch (_) {}
     setSubmitState("sent");
@@ -635,7 +643,7 @@ function Calculator({ lang }: { lang: Lang }) {
                 <motion.div key="s3" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as any }} className="space-y-6 text-center">
                   
-                  {/* SUCCESS ICON */}
+                  {/* SUCCESS HEADER */}
                   <div className="flex flex-col items-center">
                      <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: "rgba(34,197,94,0.1)" }}>
                        {submitState === "sent" 
@@ -647,27 +655,27 @@ function Calculator({ lang }: { lang: Lang }) {
                      <p className="text-sm font-medium mt-1" style={{ color: "#d4af37" }}>{t.successSub}</p>
                   </div>
 
-                  {/* ANALYSIS STEPS ANIMATION */}
-                  <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 text-left space-y-4">
-                     {[t.step1, t.step2, t.step3].map((stepText, i) => (
-                       <motion.div 
-                         key={i}
-                         initial={{ opacity: 0, x: -10 }} 
-                         animate={{ opacity: 1, x: 0 }} 
-                         transition={{ delay: 0.5 + (i * 0.4) }}
-                         className="flex items-center gap-3"
-                       >
-                         <CheckCircle size={18} className="text-green-500 shrink-0" />
-                         <span className="text-sm font-medium text-slate-700">{stepText}</span>
-                       </motion.div>
-                     ))}
+                  {/* PERCENTAGE CARD */}
+                  <div className="p-6 rounded-2xl relative overflow-hidden" style={{ background: "#0f172a", border: "1px solid rgba(212,175,55,0.3)" }}>
+                    <div className="absolute top-0 right-0 w-24 h-24 opacity-10" style={{ background: "radial-gradient(circle, #d4af37, transparent)" }} />
+                    <p className="text-xs uppercase tracking-wider font-bold mb-2" style={{ color: "rgba(255,255,255,0.6)" }}>{t.estTitle}</p>
+                    <p className="text-5xl font-black mb-1" style={{ color: "#d4af37", fontFamily: "Georgia, serif" }}>{t.estRange}</p>
+                    <p className="text-sm" style={{ color: "rgba(255,255,255,0.8)" }}>{t.estSub}</p>
                   </div>
 
-                  {/* FINAL MESSAGE */}
-                  <div className="p-4 rounded-xl text-left" style={{ background: "rgba(212,175,55,0.08)", border: "1px solid rgba(212,175,55,0.2)" }}>
-                    <p className="text-sm leading-relaxed" style={{ color: "#0f172a" }}>
-                      <span className="font-bold">Note de Hamza :</span> {t.finalMsg}
-                    </p>
+                  {/* DISCLAIMER BOX */}
+                  <div className="p-5 rounded-xl text-left" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                    <div className="flex gap-3">
+                      <FileText size={20} className="shrink-0 text-slate-400" />
+                      <div>
+                        <p className="text-sm leading-relaxed mb-2" style={{ color: "#334155" }}>
+                          {t.finalMsg}
+                        </p>
+                        <p className="text-sm font-bold" style={{ color: "#0f172a" }}>
+                          {t.ctaAction}
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   <a href={WA(waMsg)} target="_blank" rel="noopener noreferrer"
