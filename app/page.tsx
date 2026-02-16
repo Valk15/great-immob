@@ -6,22 +6,24 @@ import {
   Shield, Star, TrendingUp, ChevronDown, CheckCircle,
   BarChart3, Lock, Award, ArrowRight, MessageCircle,
   Home, Calendar, Phone, BadgeCheck, Sparkles,
-  Users, Building2,
+  Users, Building2, Loader2, FileText
 } from "lucide-react";
 
-const HAMZA_WHATSAPP = "212641553583";
+// --- CONFIGURATION ---
+const HAMZA_WHATSAPP = "212641553583"; 
 const SHEETS_URL = "https://script.google.com/macros/s/AKfycbwV6xAtGW-GZ4Yl5kHDne8-uVXcaPgDqDBE5Xz4IkvyilpPQZajxjS-OLyyfixd50wnmg/exec";
 const WA = (msg: string) => `https://wa.me/${HAMZA_WHATSAPP}?text=${encodeURIComponent(msg)}`;
 
 type Lang = "fr" | "en" | "ar";
 
+// --- TRANSLATIONS ---
 const T = {
   fr: {
     dir: "ltr" as const,
     nav: { proof: "Nos Preuves", simulator: "Simulateur", legal: "100% Légal", cta: "Parler à Hamza" },
     hero: {
       badge1: "Autorisation Officielle", badge2: "Déclaration Police Assurée", badge3: "Guest Favorite Airbnb",
-      h1a: "Votre Appartement à Agadir", h1b: "Gagne Trop Peu.",
+      h1a: "Votre Appartement au Maroc", h1b: "Gagne Trop Peu.",
       sub: "GreatImmob gère votre bien sur Airbnb — pricing dynamique, gestion complète, 100% légal. Résultat : vos revenus doublent. Prouvé.",
       cta1: "Estimer mon revenu — Gratuit", cta2: "Parler à Hamza", scroll: "Voir nos preuves",
     },
@@ -43,24 +45,26 @@ const T = {
     },
     calc: {
       tag: "Outil Gratuit", h2a: "Combien peut gagner", h2b: "votre appartement ?",
-      sub: "Estimation basée sur nos vraies données de marché à Agadir.",
+      sub: "Estimation basée sur nos vraies données de marché.",
       label: "Simulateur GreatImmob",
-      steps: ["Votre bien","Vos coordonnées","Résultat"],
-      quartierLabel: "Votre quartier", quartierPlaceholder: "Ex: Marina, Cité Salam, Tamraght...",
+      steps: ["Votre bien","Vos coordonnées","Analyse"],
+      quartierLabel: "Votre ville / quartier", quartierPlaceholder: "Ex: Marina Agadir, Guéliz Marrakech...",
       typeLabel: "Type de bien",
       types: ["Studio / 1 Chambre","2 Chambres","3 Chambres"],
-      next: "Voir mon estimation →",
-      privacy: "Votre estimation est prête. Hamza vous la présente personnellement — aucun spam garanti.",
+      next: "Lancer l'analyse →",
+      privacy: "Nous générons une étude comparative (Airbnb vs Booking). Hamza vous l'enverra personnellement.",
       nameLabel: "Votre prénom", namePlaceholder: "Mohamed, Fatima...",
       phoneLabel: "WhatsApp Maroc", phonePlaceholder: "6XX XX XX XX",
       messageLabel: "Détails supplémentaires (optionnel)",
       messagePlaceholder: "Étage, ascenseur, état du bien, disponibilité...",
-      reveal: "Révéler mon estimation gratuite", back: "← Modifier mon bien",
-      classic: "Location classique", withUs: "Avec GreatImmob", perMonth: "MAD / mois",
-      leaving: "Vous laissez", onTable: "sur la table chaque mois.",
-      waBtn: "Parler à Hamza sur WhatsApp →",
-      disclaimer: "* Estimation basée sur les prix réels du marché Agadir.",
-      sending: "Envoi en cours...", sent: "✓ Données enregistrées",
+      reveal: "Recevoir mon rapport complet", back: "← Modifier",
+      // New Teaser Text
+      successTitle: "Demande Reçue !",
+      successSub: "Analyse en cours...",
+      step1: "Analyse du quartier", step2: "Comparatif Airbnb/Booking", step3: "Calcul du taux d'occupation",
+      finalMsg: "Votre estimation approximative est prête. Pour éviter les fausses promesses, Hamza finalise le rapport détaillé et vous l'envoie sur WhatsApp.",
+      waBtn: "Contacter Hamza maintenant →",
+      sending: "Envoi en cours...", sent: "✓ Données envoyées",
     },
     legal: {
       tag: "Vos 3 Peurs — Éliminées", h2a: "Légal. Sécurisé.", h2b: "Transparent.",
@@ -78,14 +82,14 @@ const T = {
       sub: "Un message WhatsApp à Hamza suffit. Pas d'engagement, pas de frais cachés.",
       btn: "Parler à Hamza maintenant", footer: "Légal · Déclaré Police · Guest Favorite Airbnb · Géré par Hamza",
     },
-    footerCopy: "© 2025 GreatImmob · Agence Conciergerie Airbnb · Maroc",
+    footerCopy: "© 2025 GreatImmob · Conciergerie Airbnb · Maroc",
   },
   en: {
     dir: "ltr" as const,
     nav: { proof: "Our Proof", simulator: "Simulator", legal: "100% Legal", cta: "Talk to Hamza" },
     hero: {
       badge1: "Official Authorization", badge2: "Police Declaration Assured", badge3: "Airbnb Guest Favorite",
-      h1a: "Your Agadir Apartment", h1b: "Earns Too Little.",
+      h1a: "Your Apartment in Morocco", h1b: "Earns Too Little.",
       sub: "GreatImmob manages your property on Airbnb — dynamic pricing, full management, 100% legal. Result: your income doubles. Proven.",
       cta1: "Estimate my revenue — Free", cta2: "Talk to Hamza", scroll: "See our proof",
     },
@@ -107,24 +111,25 @@ const T = {
     },
     calc: {
       tag: "Free Tool", h2a: "How much can your", h2b: "apartment earn?",
-      sub: "Estimate based on our real Agadir market data.",
+      sub: "Estimate based on real market data.",
       label: "GreatImmob Simulator",
-      steps: ["Your property","Your details","Result"],
-      quartierLabel: "Your neighbourhood", quartierPlaceholder: "e.g. Marina, Cité Salam, Tamraght...",
+      steps: ["Your property","Your details","Analysis"],
+      quartierLabel: "Your city / neighbourhood", quartierPlaceholder: "e.g. Marina Agadir, Marrakech...",
       typeLabel: "Property type",
       types: ["Studio / 1 Bedroom","2 Bedrooms","3 Bedrooms"],
-      next: "See my estimate →",
-      privacy: "Your estimate is ready. Hamza will present it personally — no spam guaranteed.",
+      next: "Start analysis →",
+      privacy: "We are generating a comparative study (Airbnb vs Booking). Hamza will send it to you personally.",
       nameLabel: "Your first name", namePlaceholder: "Mohamed, Fatima...",
       phoneLabel: "WhatsApp Morocco", phonePlaceholder: "6XX XX XX XX",
       messageLabel: "Additional details (optional)",
       messagePlaceholder: "Floor, elevator, property condition, availability...",
-      reveal: "Reveal my free estimate", back: "← Edit my property",
-      classic: "Standard rental", withUs: "With GreatImmob", perMonth: "MAD / month",
-      leaving: "You're leaving", onTable: "on the table every month.",
-      waBtn: "Talk to Hamza on WhatsApp →",
-      disclaimer: "* Estimate based on real Agadir market prices.",
-      sending: "Sending...", sent: "✓ Data saved",
+      reveal: "Receive my full report", back: "← Edit",
+      successTitle: "Request Received!",
+      successSub: "Analysis in progress...",
+      step1: "Neighborhood analysis", step2: "Airbnb/Booking comparison", step3: "Occupancy rate calculation",
+      finalMsg: "Your approximate estimate is ready. To avoid false promises, Hamza is finalizing the detailed report and will send it to you on WhatsApp.",
+      waBtn: "Contact Hamza now →",
+      sending: "Sending...", sent: "✓ Data sent",
     },
     legal: {
       tag: "Your 3 Fears — Eliminated", h2a: "Legal. Secure.", h2b: "Transparent.",
@@ -149,7 +154,7 @@ const T = {
     nav: { proof: "إثباتاتنا", simulator: "حاسبة الدخل", legal: "قانوني 100%", cta: "تحدث مع حمزة" },
     hero: {
       badge1: "ترخيص رسمي", badge2: "تصريح الشرطة مضمون", badge3: "ضيف مفضل على Airbnb",
-      h1a: "شقتك في أكادير", h1b: "تكسب أقل مما تستحق.",
+      h1a: "شقتك في المغرب", h1b: "تكسب أقل مما تستحق.",
       sub: "GreatImmob تدير عقارك على Airbnb — تسعير ديناميكي، إدارة كاملة، قانوني 100%. النتيجة: دخلك يتضاعف. مثبت.",
       cta1: "احسب دخلي — مجاناً", cta2: "تحدث مع حمزة", scroll: "شاهد إثباتاتنا",
     },
@@ -171,24 +176,25 @@ const T = {
     },
     calc: {
       tag: "أداة مجانية", h2a: "كم يمكن أن تربح", h2b: "شقتك؟",
-      sub: "تقدير مبني على بيانات السوق الحقيقية في أكادير.",
+      sub: "تقدير مبني على بيانات السوق الحقيقية.",
       label: "حاسبة GreatImmob",
-      steps: ["عقارك","بياناتك","النتيجة"],
-      quartierLabel: "حيك السكني", quartierPlaceholder: "مثال: المارينا، مدينة السلام، تمراغت...",
+      steps: ["عقارك","بياناتك","التحليل"],
+      quartierLabel: "مدينتك / حيك السكني", quartierPlaceholder: "مثال: المارينا، مراكش، طنجة...",
       typeLabel: "نوع العقار",
       types: ["استوديو / غرفة واحدة","غرفتان","3 غرف"],
-      next: "شاهد تقديري ←",
-      privacy: "تقديرك جاهز. حمزة سيقدمه لك شخصياً — لا رسائل مزعجة مضمونة.",
+      next: "بدء التحليل ←",
+      privacy: "نقوم بإعداد دراسة مقارنة (Airbnb vs Booking). حمزة سيرسلها لك شخصياً.",
       nameLabel: "اسمك الأول", namePlaceholder: "محمد، فاطمة...",
       phoneLabel: "واتساب المغرب", phonePlaceholder: "6XX XX XX XX",
       messageLabel: "تفاصيل إضافية (اختياري)",
       messagePlaceholder: "الطابق، المصعد، حالة العقار، التوفر...",
-      reveal: "اكشف تقديري المجاني", back: "← تعديل عقاري",
-      classic: "إيجار عادي", withUs: "مع GreatImmob", perMonth: "درهم / شهر",
-      leaving: "أنت تترك", onTable: "على الطاولة كل شهر.",
-      waBtn: "تحدث مع حمزة على واتساب ←",
-      disclaimer: "* تقدير مبني على أسعار السوق الحقيقية في أكادير.",
-      sending: "جارٍ الإرسال...", sent: "✓ تم حفظ البيانات",
+      reveal: "استلام تقريري الكامل", back: "← تعديل",
+      successTitle: "تم استلام الطلب!",
+      successSub: "جارٍ تحليل البيانات...",
+      step1: "تحليل الحي السكني", step2: "مقارنة الأسعار (Airbnb/Booking)", step3: "حساب معدل الإشغال المتوقع",
+      finalMsg: "تقديرك التقريبي جاهز. لتجنب الوعود الكاذبة، يقوم حمزة بإنهاء التقرير المفصل وسيرسله لك عبر واتساب.",
+      waBtn: "تواصل مع حمزة الآن ←",
+      sending: "جارٍ الإرسال...", sent: "✓ تم الإرسال",
     },
     legal: {
       tag: "مخاوفك الـ3 — تم حلها", h2a: "قانوني. آمن.", h2b: "شفاف.",
@@ -227,23 +233,11 @@ const CALENDAR_BOOKINGS = [
   { guest: "Elena 🇷🇺", days: 3, start: 31, color: "#0f172a" },
 ];
 
-const REVENUE_DATA: Record<string, { sans: number; avec: number }> = {
-  "Studio / 1 Chambre": { sans: 2800, avec: 6500 },
-  "2 Chambres": { sans: 4800, avec: 10200 },
-  "3 Chambres": { sans: 7000, avec: 14500 },
-  "Studio / 1 Bedroom": { sans: 2800, avec: 6500 },
-  "2 Bedrooms": { sans: 4800, avec: 10200 },
-  "3 Bedrooms": { sans: 7000, avec: 14500 },
-  "استوديو / غرفة واحدة": { sans: 2800, avec: 6500 },
-  "غرفتان": { sans: 4800, avec: 10200 },
-  "3 غرف": { sans: 7000, avec: 14500 },
-};
-
 const fadeUp = {
   hidden: { opacity: 0, y: 28 },
   visible: (i = 0) => ({
     opacity: 1, y: 0,
-    transition: { duration: 0.6, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.6, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] as any },
   }),
 };
 
@@ -280,7 +274,7 @@ function Navbar({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
   const t = T[lang];
   return (
     <motion.header initial={{ y: -70, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] as any }}
       className="fixed top-0 left-0 right-0 z-50" dir={t.dir}
       style={{ background: "rgba(255,255,255,0.90)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid rgba(212,175,55,0.2)", boxShadow: "0 2px 24px rgba(15,23,42,0.06)" }}>
       <div className="max-w-6xl mx-auto px-5 py-3 flex items-center justify-between gap-4">
@@ -501,6 +495,7 @@ function RealReviews({ lang }: { lang: Lang }) {
   );
 }
 
+// --- UPDATED CALCULATOR (TEASER LOGIC) ---
 function Calculator({ lang }: { lang: Lang }) {
   const t = T[lang].calc;
   const [quartier, setQuartier] = useState("");
@@ -509,19 +504,19 @@ function Calculator({ lang }: { lang: Lang }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
-  const [result, setResult] = useState<{ sans: number; avec: number } | null>(null);
+  // We remove 'result' state because we won't show numbers
   const [submitState, setSubmitState] = useState<"idle" | "sending" | "sent">("idle");
 
   const canStep1 = quartier.trim().length >= 2 && type;
   const canStep2 = name.length >= 2 && phone.length >= 9;
 
-  const sendToSheets = async (estimation: string) => {
+  const sendToSheets = async () => {
     setSubmitState("sending");
     try {
       await fetch(SHEETS_URL, {
         method: "POST", mode: "no-cors",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, quartier, type, estimation, message }),
+        body: JSON.stringify({ name, phone, quartier, type, estimation: "Teaser Requested", message }),
       });
     } catch (_) {}
     setSubmitState("sent");
@@ -529,19 +524,15 @@ function Calculator({ lang }: { lang: Lang }) {
 
   const handleReveal = async () => {
     if (!canStep2) return;
-    const data = REVENUE_DATA[type];
-    if (data) {
-      setResult(data);
-      setStep(3);
-      await sendToSheets(`${data.avec.toLocaleString("fr-MA")} MAD/mois`);
-    }
+    setStep(3);
+    await sendToSheets();
   };
 
   const waMsg = lang === "ar"
-    ? `مرحبا حمزة 👋 اسمي ${name}. استخدمت حاسبتكم (${type} في ${quartier}). رقمي: +212${phone}${message ? `. ملاحظات: ${message}` : ""}`
+    ? `مرحبا حمزة 👋 اسمي ${name}. قمت بطلب تقدير لـ (${type} في ${quartier}). رقمي: +212${phone}. أنتظر تقريري. ${message ? `. ملاحظات: ${message}` : ""}`
     : lang === "en"
-    ? `Hello Hamza 👋 My name is ${name}. I used your simulator (${type} in ${quartier}). My number: +212${phone}${message ? `. Notes: ${message}` : ""}`
-    : `Bonjour Hamza 👋 Je m'appelle ${name}. J'ai simulé mon appartement (${type} à ${quartier}). Mon numéro : +212${phone}${message ? `. Détails : ${message}` : ""}`;
+    ? `Hello Hamza 👋 My name is ${name}. I requested an estimate for (${type} in ${quartier}). My number: +212${phone}. I am waiting for my report. ${message ? `. Notes: ${message}` : ""}`
+    : `Bonjour Hamza 👋 Je m'appelle ${name}. J'ai demandé une estimation pour (${type} à ${quartier}). Mon numéro : +212${phone}. J'attends mon rapport. ${message ? `. Détails : ${message}` : ""}`;
 
   return (
     <section id="calculator" className="py-24" dir={T[lang].dir} style={{ background: "linear-gradient(160deg, #ffffff 0%, #f9f7f2 100%)" }}>
@@ -640,40 +631,50 @@ function Calculator({ lang }: { lang: Lang }) {
                   <button onClick={() => setStep(1)} className="w-full text-sm text-center hover:opacity-60 transition-opacity" style={{ color: "#9ca3af" }}>{t.back}</button>
                 </motion.div>
               )}
-              {step === 3 && result && (
+              {step === 3 && (
                 <motion.div key="s3" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }} className="space-y-5 text-center">
-                  <div>
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "rgba(212,175,55,0.12)" }}>
-                      <CheckCircle size={24} style={{ color: "#d4af37" }} />
-                    </div>
-                    {submitState === "sent" && (
-                      <div className="text-xs font-bold mb-2 py-1.5 px-4 rounded-full inline-block" style={{ background: "rgba(34,197,94,0.1)", color: "#16a34a" }}>{t.sent}</div>
-                    )}
-                    <p className="text-xs font-bold tracking-widest uppercase mt-1" style={{ color: "#d4af37" }}>{name} · {type} · {quartier}</p>
+                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as any }} className="space-y-6 text-center">
+                  
+                  {/* SUCCESS ICON */}
+                  <div className="flex flex-col items-center">
+                     <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: "rgba(34,197,94,0.1)" }}>
+                       {submitState === "sent" 
+                         ? <CheckCircle size={32} style={{ color: "#16a34a" }} />
+                         : <Loader2 size={32} className="animate-spin" style={{ color: "#d4af37" }} />
+                       }
+                     </div>
+                     <h3 className="text-2xl font-black" style={{ color: "#0f172a", fontFamily: "Georgia, serif" }}>{t.successTitle}</h3>
+                     <p className="text-sm font-medium mt-1" style={{ color: "#d4af37" }}>{t.successSub}</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-5 rounded-2xl text-left" style={{ background: "#f3f4f6", border: "1px solid #e5e7eb" }}>
-                      <p className="text-xs uppercase tracking-wider font-bold mb-2" style={{ color: "#9ca3af" }}>{t.classic}</p>
-                      <p className="text-3xl font-black" style={{ color: "#6b7280", fontFamily: "Georgia, serif" }}>{result.sans.toLocaleString("fr-MA")}</p>
-                      <p className="text-sm mt-0.5" style={{ color: "#9ca3af" }}>{t.perMonth}</p>
-                    </div>
-                    <div className="p-5 rounded-2xl text-left relative overflow-hidden" style={{ background: "#0f172a", border: "1px solid rgba(212,175,55,0.3)" }}>
-                      <div className="absolute top-0 right-0 w-16 h-16 opacity-20" style={{ background: "radial-gradient(circle, #d4af37, transparent)" }} />
-                      <p className="text-xs uppercase tracking-wider font-bold mb-2" style={{ color: "#d4af37" }}>{t.withUs}</p>
-                      <p className="text-3xl font-black" style={{ color: "#d4af37", fontFamily: "Georgia, serif" }}>{result.avec.toLocaleString("fr-MA")}</p>
-                      <p className="text-sm mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{t.perMonth}</p>
-                    </div>
+
+                  {/* ANALYSIS STEPS ANIMATION */}
+                  <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 text-left space-y-4">
+                     {[t.step1, t.step2, t.step3].map((stepText, i) => (
+                       <motion.div 
+                         key={i}
+                         initial={{ opacity: 0, x: -10 }} 
+                         animate={{ opacity: 1, x: 0 }} 
+                         transition={{ delay: 0.5 + (i * 0.4) }}
+                         className="flex items-center gap-3"
+                       >
+                         <CheckCircle size={18} className="text-green-500 shrink-0" />
+                         <span className="text-sm font-medium text-slate-700">{stepText}</span>
+                       </motion.div>
+                     ))}
                   </div>
-                  <div className="py-3 px-4 rounded-xl text-sm font-semibold" style={{ background: "rgba(212,175,55,0.1)", color: "#0f172a" }}>
-                    {t.leaving} <strong style={{ color: "#d4af37" }}>+{(result.avec - result.sans).toLocaleString("fr-MA")} MAD</strong> {t.onTable}
+
+                  {/* FINAL MESSAGE */}
+                  <div className="p-4 rounded-xl text-left" style={{ background: "rgba(212,175,55,0.08)", border: "1px solid rgba(212,175,55,0.2)" }}>
+                    <p className="text-sm leading-relaxed" style={{ color: "#0f172a" }}>
+                      <span className="font-bold">Note de Hamza :</span> {t.finalMsg}
+                    </p>
                   </div>
+
                   <a href={WA(waMsg)} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 w-full py-4 rounded-xl font-bold text-base transition-all hover:scale-[1.02]"
+                    className="flex items-center justify-center gap-2 w-full py-4 rounded-xl font-bold text-base transition-all hover:scale-[1.02] animate-pulse"
                     style={{ background: "#25D366", color: "#ffffff", boxShadow: "0 8px 28px rgba(37,211,102,0.3)" }}>
                     <MessageCircle size={18} />{t.waBtn}
                   </a>
-                  <p className="text-xs" style={{ color: "#9ca3af" }}>{t.disclaimer}</p>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -752,8 +753,8 @@ function FinalCTA({ lang }: { lang: Lang }) {
 function Footer({ lang }: { lang: Lang }) {
   return (
     <footer className="py-8" dir={T[lang].dir} style={{ background: "#0a1020", borderTop: "1px solid rgba(212,175,55,0.1)" }}>
-      <div className="max-w-5xl mx-auto px-5 flex flex-col md:flex-row items-center justify-between gap-6 min-w-0">
-      <div className="shrink-0"><Logo /></div>
+      <div className="max-w-5xl mx-auto px-5 flex flex-col md:flex-row items-center justify-between gap-4">
+        <Logo />
         <p className="text-xs text-center" style={{ color: "rgba(255,255,255,0.25)" }}>{T[lang].footerCopy}</p>
         <a href={WA("Bonjour Hamza")} target="_blank" rel="noopener noreferrer" className="text-xs font-bold hover:opacity-70 transition-opacity" style={{ color: "#d4af37" }}>WhatsApp →</a>
       </div>
