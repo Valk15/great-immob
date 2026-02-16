@@ -517,14 +517,13 @@ function Calculator({ lang }: { lang: Lang }) {
   const canStep1 = quartier.trim().length >= 2 && type;
   const canStep2 = name.length >= 2 && phone.length >= 9;
 
-  const sendToSheets = async () => {
+  const sendToSheets = async (estimation: string) => {
     setSubmitState("sending");
     try {
-      await fetch(SHEETS_URL, {
-        method: "POST", mode: "no-cors",
-        // !!! CRITICAL FIX: text/plain to bypass Google blocking !!!
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ name, phone, quartier, type, estimation: "Requested Estimate (+60-120%)", message }),
+      await fetch("/api/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, phone, quartier, type, estimation, message }),
       });
     } catch (_) {}
     setSubmitState("sent");
