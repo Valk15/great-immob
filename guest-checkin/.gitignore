@@ -1,0 +1,9 @@
+node_modules
+.next
+.env
+.env.local
+data/stays.json
+data/uploads
+data/operator-signature.png
+data/*.png
+*.log
