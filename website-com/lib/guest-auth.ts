@@ -83,5 +83,5 @@ export async function currentGuest() {
   const jar = await cookies();
   const id = await parseGuestSession(jar.get(GUEST_COOKIE)?.value);
   if (!id) return null;
-  return getGuest(id) ?? null;
+  return (await getGuest(id)) ?? null;
 }

@@ -5,22 +5,36 @@ import { BrandLockup, Eyebrow } from "@/components/BrandMark";
 import { ContractDownload } from "@/components/ContractDownload";
 import { LanguagePicker } from "@/components/LanguagePicker";
 import { guestCopy, localeFromBrowser, parseLocale, type GuestLocale } from "@/lib/i18n";
+import { SITE_COOKIE, parseSiteLocale } from "@/lib/site-i18n";
 import type { Stay } from "@/lib/types";
 import { CheckinForm } from "./CheckinForm";
 
+function siteLangFromCookie(): GuestLocale | null {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${SITE_COOKIE}=([^;]*)`));
+  const site = parseSiteLocale(match?.[1]);
+  return site;
+}
+
 export function GuestCheckin({ stay, closed }: { stay: Stay; closed: boolean }) {
+  const locked = Boolean(stay.guest?.locale);
   const [locale, setLocale] = useState<GuestLocale>(parseLocale(stay.guest?.locale));
+  const [ready, setReady] = useState(locked);
 
   useEffect(() => {
-    if (stay.guest?.locale) return;
+    if (locked) return;
     const saved = window.localStorage.getItem("gi-guest-locale");
-    setLocale(saved ? parseLocale(saved) : localeFromBrowser(navigator.language));
-  }, [stay.guest?.locale]);
+    if (saved) {
+      setLocale(parseLocale(saved));
+    } else {
+      setLocale(siteLangFromCookie() ?? localeFromBrowser(navigator.language));
+    }
+    setReady(true);
+  }, [locked]);
 
   useEffect(() => {
-    if (stay.guest?.locale) return;
+    if (locked || !ready) return;
     window.localStorage.setItem("gi-guest-locale", locale);
-  }, [locale, stay.guest?.locale]);
+  }, [locked, ready, locale]);
 
   const copy = useMemo(() => guestCopy(locale), [locale]);
 

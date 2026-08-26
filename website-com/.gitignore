@@ -41,8 +41,8 @@ yarn-error.log*
 next-env.d.ts
 
 # local guest/operator data (IDs, signatures, bookings)
-/data/stays.json
-/data/guests.json
-/data/bookings.json
-/data/uploads
-/data/*.png
+/data
+
+.vercel
+
+.env*

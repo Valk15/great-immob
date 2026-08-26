@@ -8,5 +8,5 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const from = url.searchParams.get("from") || isoDate(new Date());
   const to = url.searchParams.get("to") || addDays(from, 180);
-  return NextResponse.json({ blocked: blockedDates(from, to) });
+  return NextResponse.json({ blocked: await blockedDates(from, to) });
 }

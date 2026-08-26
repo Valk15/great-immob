@@ -3,6 +3,7 @@ export const LISTING = {
   title: "Luxury 1BR Apartment | Fiber WiFi | Quiet & Elegant",
   subtitle: "Entire rental unit · Hay Mohammadi, Agadir",
   guests: 2,
+  petsAllowed: false,
   bedrooms: 1,
   beds: 1,
   baths: 1.5,

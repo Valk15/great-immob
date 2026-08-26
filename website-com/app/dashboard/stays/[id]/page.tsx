@@ -22,7 +22,7 @@ export default async function StayPage({
 }) {
   const { id } = await params;
   const q = await searchParams;
-  const stay = getStay(id);
+  const stay = await getStay(id);
   if (!stay) notFound();
   const origin = await appOrigin();
   const url = guestUrl(origin, stay.token);

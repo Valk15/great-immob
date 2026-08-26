@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Noto_Naskh_Arabic, Source_Sans_3 } from "next/font/google";
+import { LanguageDock } from "@/components/LanguageSwitcher";
 import { PageEnter } from "@/components/PageEnter";
+import { SiteLocaleProvider } from "@/components/SiteLocaleProvider";
+import { siteCopy } from "@/lib/site-copy";
+import { getSiteLocale } from "@/lib/get-site-locale";
 import "./globals.css";
 
 const display = Cormorant_Garamond({
@@ -21,24 +25,36 @@ const arabic = Noto_Naskh_Arabic({
   variable: "--font-arabic",
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "GreatImmob — Hay Mohammadi, Agadir",
-    template: "%s · GreatImmob",
-  },
-  description:
-    "Entire 1-bedroom apartment in Hay Mohammadi, Agadir. Fibre Wi-Fi, quiet, hosted by Hamza. Book direct on greatimmob.com.",
-  icons: {
-    icon: "/favicon.png",
-    apple: "/apple-touch-icon.png",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = siteCopy(await getSiteLocale());
+  return {
+    title: {
+      default: copy.meta.defaultTitle,
+      template: "%s · GreatImmob",
+    },
+    description: copy.meta.description,
+    icons: {
+      icon: "/favicon.png",
+      apple: "/apple-touch-icon.png",
+    },
+  };
+}
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getSiteLocale();
+  const copy = siteCopy(locale);
+
   return (
-    <html lang="fr">
-      <body className={`${display.variable} ${sans.variable} ${arabic.variable} font-sans antialiased bg-bone text-ink`}>
-        <PageEnter>{children}</PageEnter>
+    <html lang={copy.lang} dir={copy.dir}>
+      <body
+        className={`${display.variable} ${sans.variable} ${arabic.variable} font-sans antialiased bg-bone text-ink ${
+          locale === "ar" ? "font-ar" : ""
+        }`}
+      >
+        <SiteLocaleProvider locale={locale}>
+          <PageEnter>{children}</PageEnter>
+          <LanguageDock />
+        </SiteLocaleProvider>
       </body>
     </html>
   );

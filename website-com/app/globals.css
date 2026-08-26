@@ -38,6 +38,25 @@ input[type="file"]::file-selector-button {
   animation: page-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+@keyframes hero-zoom {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+
+.hero-media {
+  animation: hero-zoom 22s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-media {
+    animation: none;
+  }
+}
+
 @keyframes step-enter {
   from {
     opacity: 0;

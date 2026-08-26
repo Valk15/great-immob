@@ -32,6 +32,7 @@ export function NationalitySelect({
       <select
         name={name}
         defaultValue={defaultCode}
+        required={required}
         className="mt-1 w-full border border-mist bg-white px-3 py-3"
       >
         {options.map((c) => (
@@ -88,6 +89,7 @@ export function PhoneFields({
           name={localName}
           type="tel"
           inputMode="tel"
+          required={required}
           placeholder="6 12 34 56 78"
           className="min-w-0 flex-1 border border-mist px-3 py-3"
         />

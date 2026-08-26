@@ -2,25 +2,43 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { addDays, isoDate, nightlyRateMad, nightsBetween, quoteStay } from "@/lib/listing";
+import { LISTING, addDays, isoDate, nightlyRateMad, nightsBetween, quoteStay } from "@/lib/listing";
+import { clampParty, partySearchParams, peopleCount, type GuestParty } from "@/lib/guest-party";
+import { useSite } from "@/components/SiteLocaleProvider";
+import { GuestPicker } from "@/components/GuestPicker";
 
 export function BookingPanel({
   loggedIn,
   initialIn,
   initialOut,
+  initialAdults,
+  initialChildren,
+  initialPets,
 }: {
   loggedIn: boolean;
   initialIn?: string;
   initialOut?: string;
+  initialAdults?: number;
+  initialChildren?: number;
+  initialPets?: number;
 }) {
   const router = useRouter();
+  const { copy } = useSite();
   const today = isoDate(new Date());
   const start = initialIn && initialIn >= today ? initialIn : today;
-  const end =
-    initialOut && initialOut > start ? initialOut : addDays(start, 3);
+  const end = initialOut && initialOut > start ? initialOut : addDays(start, 3);
   const [checkIn, setCheckIn] = useState(start);
   const [checkOut, setCheckOut] = useState(end);
-  const [guests, setGuests] = useState(2);
+  const [party, setParty] = useState<GuestParty>(() =>
+    clampParty(
+      {
+        adults: initialAdults ?? 2,
+        children: initialChildren ?? 0,
+        pets: initialPets ?? 0,
+      },
+      LISTING.guests,
+    ),
+  );
   const [blocked, setBlocked] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -44,27 +62,44 @@ export function BookingPanel({
     return quote.lines.some((line) => blocked.includes(line.date));
   }, [blocked, quote]);
 
+  const petsBlocked = party.pets > 0 && !LISTING.petsAllowed;
+
   async function book() {
     setError("");
     if (!loggedIn) {
-      const next = `/stay?in=${checkIn}&out=${checkOut}`;
-      router.push(`/account/login?next=${encodeURIComponent(next)}`);
+      const params = new URLSearchParams({
+        in: checkIn,
+        out: checkOut,
+        ...partySearchParams(party),
+      });
+      router.push(`/account/login?next=${encodeURIComponent(`/stay?${params.toString()}`)}`);
+      return;
+    }
+    if (petsBlocked) {
+      setError(copy.search.petsNotAllowed);
       return;
     }
     if (!quote || conflict) {
-      setError("Those dates are not available.");
+      setError(copy.booking.unavailable);
       return;
     }
     setBusy(true);
     const res = await fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ checkIn, checkOut, guests }),
+      body: JSON.stringify({
+        checkIn,
+        checkOut,
+        guests: peopleCount(party),
+        adults: party.adults,
+        children: party.children,
+        pets: party.pets,
+      }),
     });
-    const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) {
-      setError(data.error || "Booking failed.");
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      setError(data.error === "This apartment does not allow pets." ? copy.search.petsNotAllowed : copy.booking.failed);
       return;
     }
     router.push("/account?requested=1");
@@ -76,13 +111,13 @@ export function BookingPanel({
     <aside className="border border-mist bg-white p-6 shadow-[0_12px_40px_rgba(11,28,44,0.06)]">
       <p className="font-display text-3xl text-ink">
         {from} <span className="text-lg font-sans">MAD</span>
-        <span className="ml-1 text-sm font-sans text-ink/50">/ night</span>
+        <span className="ms-1 text-sm font-sans text-ink/50">{copy.booking.perNight}</span>
       </p>
-      <p className="mt-1 text-xs text-ink/50">Seasonal · 400–550 MAD. Ménage is billed to the owner, not added here.</p>
+      <p className="mt-1 text-xs text-ink/50">{copy.booking.seasonal}</p>
 
       <div className="mt-5 grid grid-cols-2 gap-px border border-mist bg-mist">
         <label className="bg-white px-3 py-3 text-[11px] uppercase tracking-wide text-champagne">
-          Check-in
+          {copy.search.checkIn}
           <input
             type="date"
             value={checkIn}
@@ -91,64 +126,55 @@ export function BookingPanel({
               setCheckIn(e.target.value);
               if (e.target.value >= checkOut) setCheckOut(addDays(e.target.value, 2));
             }}
-            className="mt-1 block w-full bg-transparent text-sm text-ink outline-none"
+            className="mt-1 block w-full bg-transparent text-sm normal-case tracking-normal text-ink outline-none"
           />
         </label>
         <label className="bg-white px-3 py-3 text-[11px] uppercase tracking-wide text-champagne">
-          Checkout
+          {copy.search.checkout}
           <input
             type="date"
             value={checkOut}
             min={addDays(checkIn, 1)}
             onChange={(e) => setCheckOut(e.target.value)}
-            className="mt-1 block w-full bg-transparent text-sm text-ink outline-none"
+            className="mt-1 block w-full bg-transparent text-sm normal-case tracking-normal text-ink outline-none"
           />
         </label>
-        <label className="col-span-2 bg-white px-3 py-3 text-[11px] uppercase tracking-wide text-champagne">
-          Guests
-          <select
-            value={guests}
-            onChange={(e) => setGuests(Number(e.target.value))}
-            className="mt-1 block w-full bg-transparent text-sm text-ink outline-none"
-          >
-            <option value={1}>1 guest</option>
-            <option value={2}>2 guests</option>
-          </select>
-        </label>
+        <GuestPicker
+          variant="inline"
+          value={party}
+          onChange={setParty}
+          maxPeople={LISTING.guests}
+          petsAllowed={LISTING.petsAllowed}
+          capacityNote={copy.search.maxPeople}
+        />
       </div>
 
       {quote ? (
         <ul className="mt-4 space-y-2 text-sm">
           <li className="flex justify-between">
-            <span>
-              {quote.nights} night{quote.nights > 1 ? "s" : ""}
-            </span>
+            <span>{copy.booking.nights(quote.nights)}</span>
             <span>{quote.totalMad} MAD</span>
           </li>
           <li className="flex justify-between border-t border-mist pt-2 font-medium">
-            <span>Total</span>
+            <span>{copy.booking.total}</span>
             <span>{quote.totalMad} MAD</span>
           </li>
         </ul>
       ) : null}
 
-      {conflict ? (
-        <p className="mt-3 text-sm text-ink/70">Those nights overlap a stay already on the calendar.</p>
-      ) : null}
+      {conflict ? <p className="mt-3 text-sm text-ink/70">{copy.booking.conflict}</p> : null}
+      {petsBlocked ? <p className="mt-3 text-sm text-champagne">{copy.search.petsNotAllowed}</p> : null}
       {error ? <p className="mt-3 text-sm text-champagne">{error}</p> : null}
 
       <button
         type="button"
         onClick={book}
-        disabled={busy || conflict || !quote}
+        disabled={busy || conflict || !quote || petsBlocked}
         className="mt-5 w-full rounded-gi bg-champagne py-3 text-sm font-medium text-ink disabled:opacity-50"
       >
-        {busy ? "Sending…" : loggedIn ? "Request to book" : "Log in to request"}
+        {busy ? copy.booking.sending : loggedIn ? copy.booking.request : copy.booking.logInToRequest}
       </button>
-      <p className="mt-3 text-xs leading-relaxed text-ink/50">
-        Not instant. Hamza confirms so this calendar and Airbnb never clash. Payment on WhatsApp
-        after confirmation — no card on this site yet.
-      </p>
+      <p className="mt-3 text-xs leading-relaxed text-ink/50">{copy.booking.notInstant}</p>
     </aside>
   );
 }

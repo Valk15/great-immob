@@ -21,10 +21,10 @@ export default async function DashboardPage({
   searchParams: Promise<{ sig?: string; deleted?: string }>;
 }) {
   const q = await searchParams;
-  const stays = listStays();
+  const stays = await listStays();
   const origin = await appOrigin();
-  const hasSig = hasOperatorSignature();
-  const requests = listBookings().filter((b) => b.status === "pending");
+  const hasSig = await hasOperatorSignature();
+  const requests = (await listBookings()).filter((b) => b.status === "pending");
 
   return (
     <main className="min-h-screen bg-bone">
@@ -51,7 +51,11 @@ export default async function DashboardPage({
                     {b.guestName} · {b.checkIn} → {b.checkOut}
                   </p>
                   <p className="text-xs text-ink/60">
-                    {b.nights} nuits · {b.guests} pers. · {b.totalMad} MAD · {b.guestEmail}
+                    {b.nights} nuits · {b.adults ?? b.guests} adulte{(b.adults ?? b.guests) > 1 ? "s" : ""}
+                    {(b.children ?? 0) > 0 ? ` · ${b.children} enfant${(b.children ?? 0) > 1 ? "s" : ""}` : ""}
+                    {(b.pets ?? 0) > 0 ? ` · ${b.pets} animal${(b.pets ?? 0) > 1 ? "aux" : ""}` : ""}
+                    {" · "}
+                    {b.totalMad} MAD · {b.guestEmail}
                   </p>
                 </div>
                 <div className="flex gap-2">

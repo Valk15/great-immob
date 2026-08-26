@@ -1,53 +1,49 @@
-import { writeFileSync, readFileSync, existsSync } from "fs";
 import { buildContractPdf, buildFichePdf, buildOperatorDossierPdf } from "./pdf";
 import { parseLocale } from "./i18n";
-import { publicFileName, saveStay, uploadPath } from "./store";
+import { publicFileName, readUpload, saveStay, writeUpload } from "./store";
 import type { Stay } from "./types";
 
-export function writeStayFile(stayId: string, name: string, buf: Buffer) {
-  const full = uploadPath(stayId, name);
-  writeFileSync(full, buf);
+export async function writeStayFile(stayId: string, name: string, buf: Buffer) {
+  await writeUpload(stayId, name, buf);
   return name;
 }
 
-export function readStayFile(stay: Stay, kind: keyof Stay["files"]) {
+export async function readStayFile(stay: Stay, kind: keyof Stay["files"]) {
   const name = stay.files[kind];
   if (!name) return null;
-  const full = uploadPath(stay.id, name);
-  if (!existsSync(full)) return null;
-  return readFileSync(full);
+  return readUpload(stay.id, name);
 }
 
 export async function rebuildDocuments(stay: Stay) {
-  const guestSig = readStayFile(stay, "guestSignature");
+  const guestSig = await readStayFile(stay, "guestSignature");
   const guestLocale = parseLocale(stay.guest?.locale);
   const guestContract = await buildContractPdf(stay, guestSig, guestLocale);
   const operatorContract = await buildContractPdf(stay, guestSig, "fr");
   const fiche = await buildFichePdf(stay);
-  stay.files.contractPdf = writeStayFile(
+  stay.files.contractPdf = await writeStayFile(
     stay.id,
     publicFileName("contrat", "pdf"),
     Buffer.from(guestContract),
   );
-  stay.files.fichePdf = writeStayFile(
+  stay.files.fichePdf = await writeStayFile(
     stay.id,
     publicFileName("fiche-police", "pdf"),
     Buffer.from(fiche),
   );
 
   const ids: { label: string; buf: Buffer }[] = [];
-  const recto = readStayFile(stay, "idRecto");
+  const recto = await readStayFile(stay, "idRecto");
   if (recto) ids.push({ label: "Recto", buf: recto });
-  const verso = readStayFile(stay, "idVerso");
+  const verso = await readStayFile(stay, "idVerso");
   if (verso) ids.push({ label: "Verso", buf: verso });
 
   const dossier = await buildOperatorDossierPdf(stay, operatorContract, fiche, ids);
-  stay.files.dossierPdf = writeStayFile(
+  stay.files.dossierPdf = await writeStayFile(
     stay.id,
     publicFileName("dossier-operateur", "pdf"),
     Buffer.from(dossier),
   );
-  saveStay(stay);
+  await saveStay(stay);
   return stay;
 }
 

@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   const password = String(form.get("password") || "");
   const next = String(form.get("next") || "/account");
   const safe = next.startsWith("/") && !next.startsWith("//") ? next : "/account";
-  const guest = getGuestByEmail(email);
+  const guest = await getGuestByEmail(email);
   if (!guest || !verifyPassword(password, guest.passwordHash)) {
     return relativeRedirect(`/account/login?error=1&next=${encodeURIComponent(safe)}`);
   }

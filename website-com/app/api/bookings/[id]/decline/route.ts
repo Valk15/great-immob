@@ -9,6 +9,6 @@ export async function POST(
   const denied = await requireOperatorApi();
   if (denied) return denied;
   const { id } = await ctx.params;
-  declineBooking(id);
+  await declineBooking(id);
   return relativeRedirect("/dashboard?declined=1");
 }

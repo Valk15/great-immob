@@ -1,6 +1,5 @@
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import path from "path";
+import { persistReadJson, persistWriteJson } from "./persist";
 
 export type GuestAccount = {
   id: string;
@@ -11,27 +10,13 @@ export type GuestAccount = {
   createdAt: string;
 };
 
-const ROOT = path.join(process.cwd(), "data");
-const FILE = path.join(ROOT, "guests.json");
-
-function ensure() {
-  mkdirSync(ROOT, { recursive: true });
+async function readGuests(): Promise<GuestAccount[]> {
+  const parsed = await persistReadJson<{ guests?: GuestAccount[] }>("guests.json", { guests: [] });
+  return Array.isArray(parsed.guests) ? parsed.guests : [];
 }
 
-function readGuests(): GuestAccount[] {
-  ensure();
-  if (!existsSync(FILE)) return [];
-  try {
-    const parsed = JSON.parse(readFileSync(FILE, "utf8")) as { guests?: GuestAccount[] };
-    return Array.isArray(parsed.guests) ? parsed.guests : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeGuests(guests: GuestAccount[]) {
-  ensure();
-  writeFileSync(FILE, JSON.stringify({ guests }, null, 2), "utf8");
+async function writeGuests(guests: GuestAccount[]) {
+  await persistWriteJson("guests.json", { guests });
 }
 
 export function hashPassword(password: string) {
@@ -53,20 +38,20 @@ export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-export function getGuest(id: string) {
-  return readGuests().find((g) => g.id === id);
+export async function getGuest(id: string) {
+  return (await readGuests()).find((g) => g.id === id);
 }
 
-export function getGuestByEmail(email: string) {
+export async function getGuestByEmail(email: string) {
   const key = normalizeEmail(email);
-  return readGuests().find((g) => g.email === key);
+  return (await readGuests()).find((g) => g.email === key);
 }
 
-export function createGuest(input: { email: string; name: string; phone: string; password: string }) {
+export async function createGuest(input: { email: string; name: string; phone: string; password: string }) {
   const email = normalizeEmail(input.email);
   if (!email || !email.includes("@")) throw new Error("Email invalide");
   if (input.password.length < 8) throw new Error("Mot de passe trop court (8 caractères min.)");
-  if (getGuestByEmail(email)) throw new Error("Un compte existe déjà avec cet email");
+  if (await getGuestByEmail(email)) throw new Error("Un compte existe déjà avec cet email");
   const guest: GuestAccount = {
     id: randomBytes(8).toString("hex"),
     email,
@@ -75,9 +60,9 @@ export function createGuest(input: { email: string; name: string; phone: string;
     passwordHash: hashPassword(input.password),
     createdAt: new Date().toISOString(),
   };
-  const guests = readGuests();
+  const guests = await readGuests();
   guests.push(guest);
-  writeGuests(guests);
+  await writeGuests(guests);
   return guest;
 }
 

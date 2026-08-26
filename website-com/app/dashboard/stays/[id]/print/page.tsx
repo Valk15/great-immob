@@ -10,7 +10,7 @@ export default async function PrintStayPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  let stay = getStay(id);
+  let stay = await getStay(id);
   if (!stay) notFound();
   if (stay.guest && !stay.files.dossierPdf) {
     stay = await rebuildDocuments(stay);

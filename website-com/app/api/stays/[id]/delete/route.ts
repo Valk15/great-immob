@@ -10,9 +10,9 @@ export async function POST(
   const denied = await requireOperatorApi();
   if (denied) return denied;
   const { id } = await params;
-  if (!getStay(id)) {
+  if (!(await getStay(id))) {
     return NextResponse.json({ error: "Séjour introuvable" }, { status: 404 });
   }
-  deleteStay(id);
+  await deleteStay(id);
   return relativeRedirect("/dashboard?deleted=1");
 }

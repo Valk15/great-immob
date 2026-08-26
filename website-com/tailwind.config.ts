@@ -12,8 +12,9 @@ const config: Config = {
         success: "#2F5D50",
       },
       fontFamily: {
-        display: ["var(--font-display)", "serif"],
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "var(--font-arabic)", "serif"],
+        sans: ["var(--font-sans)", "var(--font-arabic)", "system-ui", "sans-serif"],
+        ar: ["var(--font-arabic)", "sans-serif"],
       },
       letterSpacing: {
         brand: "0.18em",

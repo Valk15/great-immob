@@ -1,8 +1,7 @@
 import { randomBytes } from "crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import path from "path";
 import { PROPERTIES } from "./brand";
 import { nightsBetween, quoteStay, rangesOverlap } from "./listing";
+import { persistReadJson, persistWriteJson } from "./persist";
 import { listStays, newIds, saveStay } from "./store";
 import type { Stay } from "./types";
 
@@ -18,6 +17,9 @@ export type Booking = {
   checkIn: string;
   checkOut: string;
   guests: number;
+  adults?: number;
+  children?: number;
+  pets?: number;
   nights: number;
   totalMad: number;
   status: BookingStatus;
@@ -26,64 +28,50 @@ export type Booking = {
   createdAt: string;
 };
 
-const ROOT = path.join(process.cwd(), "data");
-const FILE = path.join(ROOT, "bookings.json");
-
-function ensure() {
-  mkdirSync(ROOT, { recursive: true });
+async function readBookings(): Promise<Booking[]> {
+  const parsed = await persistReadJson<{ bookings?: Booking[] }>("bookings.json", { bookings: [] });
+  return Array.isArray(parsed.bookings) ? parsed.bookings : [];
 }
 
-function readBookings(): Booking[] {
-  ensure();
-  if (!existsSync(FILE)) return [];
-  try {
-    const parsed = JSON.parse(readFileSync(FILE, "utf8")) as { bookings?: Booking[] };
-    return Array.isArray(parsed.bookings) ? parsed.bookings : [];
-  } catch {
-    return [];
-  }
+async function writeBookings(bookings: Booking[]) {
+  await persistWriteJson("bookings.json", { bookings });
 }
 
-function writeBookings(bookings: Booking[]) {
-  ensure();
-  writeFileSync(FILE, JSON.stringify({ bookings }, null, 2), "utf8");
+export async function listBookings() {
+  return (await readBookings()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export function listBookings() {
-  return readBookings().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+export async function getBooking(id: string) {
+  return (await readBookings()).find((b) => b.id === id);
 }
 
-export function getBooking(id: string) {
-  return readBookings().find((b) => b.id === id);
+export async function bookingsForGuest(guestId: string) {
+  return (await listBookings()).filter((b) => b.guestId === guestId);
 }
 
-export function bookingsForGuest(guestId: string) {
-  return listBookings().filter((b) => b.guestId === guestId);
-}
-
-export function saveBooking(booking: Booking) {
-  const all = readBookings();
+export async function saveBooking(booking: Booking) {
+  const all = await readBookings();
   const i = all.findIndex((b) => b.id === booking.id);
   if (i >= 0) all[i] = booking;
   else all.push(booking);
-  writeBookings(all);
+  await writeBookings(all);
   return booking;
 }
 
-export function occupiedRanges() {
-  const stays = listStays().map((s) => ({ start: s.checkIn, end: s.checkOut, source: "stay" as const }));
-  const pending = readBookings()
+export async function occupiedRanges() {
+  const stays = (await listStays()).map((s) => ({ start: s.checkIn, end: s.checkOut, source: "stay" as const }));
+  const pending = (await readBookings())
     .filter((b) => b.status === "pending" || b.status === "confirmed")
     .map((b) => ({ start: b.checkIn, end: b.checkOut, source: "booking" as const }));
   return [...stays, ...pending];
 }
 
-export function isAvailable(checkIn: string, checkOut: string, ignoreBookingId?: string) {
+export async function isAvailable(checkIn: string, checkOut: string, ignoreBookingId?: string) {
   if (!checkIn || !checkOut || nightsBetween(checkIn, checkOut) < 1) return false;
-  for (const stay of listStays()) {
+  for (const stay of await listStays()) {
     if (rangesOverlap(checkIn, checkOut, stay.checkIn, stay.checkOut)) return false;
   }
-  for (const booking of readBookings()) {
+  for (const booking of await readBookings()) {
     if (ignoreBookingId && booking.id === ignoreBookingId) continue;
     if (booking.status !== "pending" && booking.status !== "confirmed") continue;
     if (rangesOverlap(checkIn, checkOut, booking.checkIn, booking.checkOut)) return false;
@@ -91,14 +79,12 @@ export function isAvailable(checkIn: string, checkOut: string, ignoreBookingId?:
   return true;
 }
 
-export function blockedDates(fromIso: string, toIso: string) {
+export async function blockedDates(fromIso: string, toIso: string) {
   const blocked = new Set<string>();
-  const cursor = fromIso;
-  const ranges = occupiedRanges();
-  let day = cursor;
+  const ranges = await occupiedRanges();
+  let day = fromIso;
   while (day < toIso) {
     const next = day;
-    // mark night as blocked if it falls inside any stay (checkout exclusive)
     for (const r of ranges) {
       if (day >= r.start && day < r.end) blocked.add(day);
     }
@@ -110,7 +96,7 @@ export function blockedDates(fromIso: string, toIso: string) {
   return [...blocked];
 }
 
-export function requestBooking(input: {
+export async function requestBooking(input: {
   guestId: string;
   guestName: string;
   guestEmail: string;
@@ -118,11 +104,19 @@ export function requestBooking(input: {
   checkIn: string;
   checkOut: string;
   guests: number;
+  adults?: number;
+  children?: number;
+  pets?: number;
 }) {
   const nights = nightsBetween(input.checkIn, input.checkOut);
   if (nights < 1) throw new Error("Choose at least one night.");
-  if (input.guests < 1 || input.guests > 2) throw new Error("This apartment sleeps 2.");
-  if (!isAvailable(input.checkIn, input.checkOut)) {
+  const adults = Math.max(1, Math.floor(Number(input.adults ?? input.guests)));
+  const children = Math.max(0, Math.floor(Number(input.children ?? 0)));
+  const pets = Math.max(0, Math.floor(Number(input.pets ?? 0)));
+  const guests = adults + children;
+  if (guests < 1 || guests > 2) throw new Error("This apartment sleeps 2.");
+  if (pets > 0) throw new Error("This apartment does not allow pets.");
+  if (!(await isAvailable(input.checkIn, input.checkOut))) {
     throw new Error("Those dates are not available.");
   }
   const quote = quoteStay(input.checkIn, input.checkOut);
@@ -135,7 +129,10 @@ export function requestBooking(input: {
     propertyId: "essafa",
     checkIn: input.checkIn,
     checkOut: input.checkOut,
-    guests: input.guests,
+    guests,
+    adults,
+    children,
+    pets,
     nights: quote.nights,
     totalMad: quote.totalMad,
     status: "pending",
@@ -144,14 +141,14 @@ export function requestBooking(input: {
   return saveBooking(booking);
 }
 
-export function confirmBooking(id: string) {
-  const booking = getBooking(id);
+export async function confirmBooking(id: string) {
+  const booking = await getBooking(id);
   if (!booking) throw new Error("Réservation introuvable");
   if (booking.status === "confirmed" && booking.stayId) return booking;
   if (booking.status === "declined" || booking.status === "cancelled") {
     throw new Error("Cette demande n'est plus active");
   }
-  if (!isAvailable(booking.checkIn, booking.checkOut, booking.id)) {
+  if (!(await isAvailable(booking.checkIn, booking.checkOut, booking.id))) {
     throw new Error("Dates déjà prises");
   }
   const property = PROPERTIES[0];
@@ -171,15 +168,15 @@ export function confirmBooking(id: string) {
     files: {},
     bookingId: booking.id,
   };
-  saveStay(stay);
+  await saveStay(stay);
   booking.status = "confirmed";
   booking.stayId = stayId;
   booking.stayToken = token;
   return saveBooking(booking);
 }
 
-export function declineBooking(id: string) {
-  const booking = getBooking(id);
+export async function declineBooking(id: string) {
+  const booking = await getBooking(id);
   if (!booking) throw new Error("Réservation introuvable");
   booking.status = "declined";
   return saveBooking(booking);

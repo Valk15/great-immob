@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireOperatorApi } from "@/lib/auth";
-import { readFileSync } from "fs";
-import { resolveUpload } from "@/lib/store";
+import { readUpload } from "@/lib/store";
 
 const TYPES: Record<string, string> = {
   pdf: "application/pdf",
@@ -18,10 +17,9 @@ export async function GET(
   const { stayId, file } = await params;
   const denied = await requireOperatorApi();
   if (denied) return denied;
-  const full = resolveUpload(stayId, file);
-  if (!full) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
+  const buf = await readUpload(stayId, file);
+  if (!buf) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
   const ext = file.split(".").pop()?.toLowerCase() || "";
-  const buf = readFileSync(full);
   return new NextResponse(new Uint8Array(buf), {
     headers: {
       "Content-Type": TYPES[ext] || "application/octet-stream",

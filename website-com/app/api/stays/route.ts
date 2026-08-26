@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     cohabitants: [],
     files: {},
   };
-  saveStay(stay);
+  await saveStay(stay);
   return relativeRedirect(`/dashboard/stays/${id}?created=1`);
 }
 

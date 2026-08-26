@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { attachGuestCookie } from "@/lib/guest-auth";
-import { createGuest, guestPublic } from "@/lib/guests";
+import { createGuest } from "@/lib/guests";
 import { relativeRedirect } from "@/lib/url";
 
 export async function POST(request: Request) {
@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   const next = String(form.get("next") || "/account");
   const safe = next.startsWith("/") && !next.startsWith("//") ? next : "/account";
   try {
-    const guest = createGuest({
+    const guest = await createGuest({
       email: String(form.get("email") || ""),
       name: String(form.get("name") || ""),
       phone: String(form.get("phone") || ""),

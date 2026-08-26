@@ -1,65 +1,58 @@
-import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from "fs";
-import path from "path";
 import { randomBytes } from "crypto";
+import {
+  mimeFromName,
+  persistRead,
+  persistReadJson,
+  persistRemovePrefix,
+  persistWrite,
+  persistWriteJson,
+} from "./persist";
 import type { Stay, StoreShape } from "./types";
 
-const ROOT = path.join(process.cwd(), "data");
-const STORE = path.join(ROOT, "stays.json");
-const UPLOADS = path.join(ROOT, "uploads");
-export const OPERATOR_SIGNATURE = path.join(ROOT, "operator-signature.png");
+const STAYS_FILE = "stays.json";
+const SIGNATURE_FILE = "operator-signature.png";
 
-function ensureDirs() {
-  mkdirSync(UPLOADS, { recursive: true });
+async function readStore(): Promise<StoreShape> {
+  return persistReadJson<StoreShape>(STAYS_FILE, { stays: [] });
 }
 
-function readStore(): StoreShape {
-  ensureDirs();
-  if (!existsSync(STORE)) return { stays: [] };
-  try {
-    const raw = readFileSync(STORE, "utf8");
-    const parsed = JSON.parse(raw) as StoreShape;
-    return { stays: Array.isArray(parsed.stays) ? parsed.stays : [] };
-  } catch {
-    return { stays: [] };
-  }
+async function writeStore(store: StoreShape) {
+  await persistWriteJson(STAYS_FILE, {
+    stays: Array.isArray(store.stays) ? store.stays : [],
+  });
 }
 
-function writeStore(store: StoreShape) {
-  ensureDirs();
-  writeFileSync(STORE, JSON.stringify(store, null, 2), "utf8");
+export async function listStays() {
+  const store = await readStore();
+  return store.stays.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export function listStays() {
-  return readStore()
-    .stays.slice()
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+export async function getStay(id: string) {
+  const store = await readStore();
+  return store.stays.find((s) => s.id === id);
 }
 
-export function getStay(id: string) {
-  return readStore().stays.find((s) => s.id === id);
+export async function getStayByToken(token: string) {
+  const store = await readStore();
+  return store.stays.find((s) => s.token === token);
 }
 
-export function getStayByToken(token: string) {
-  return readStore().stays.find((s) => s.token === token);
-}
-
-export function saveStay(stay: Stay) {
-  const store = readStore();
+export async function saveStay(stay: Stay) {
+  const store = await readStore();
   const i = store.stays.findIndex((s) => s.id === stay.id);
   if (i >= 0) store.stays[i] = stay;
   else store.stays.push(stay);
-  writeStore(store);
+  await writeStore(store);
   return stay;
 }
 
-export function deleteStay(id: string) {
+export async function deleteStay(id: string) {
   if (!/^[a-f0-9]+$/i.test(id)) return false;
-  const store = readStore();
+  const store = await readStore();
   const next = store.stays.filter((s) => s.id !== id);
   if (next.length === store.stays.length) return false;
-  writeStore({ stays: next });
-  const dir = path.join(UPLOADS, id);
-  if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
+  await writeStore({ stays: next });
+  await persistRemovePrefix(`uploads/${id}`);
   return true;
 }
 
@@ -70,37 +63,28 @@ export function newIds() {
   };
 }
 
-export function uploadPath(stayId: string, filename: string) {
-  ensureDirs();
-  const dir = path.join(UPLOADS, stayId);
-  mkdirSync(dir, { recursive: true });
-  return path.join(dir, filename);
-}
-
 export function publicFileName(kind: string, ext: string) {
   return `${kind}.${ext.replace(/^\./, "")}`;
 }
 
-export function hasOperatorSignature() {
-  return existsSync(OPERATOR_SIGNATURE);
+export async function writeUpload(stayId: string, filename: string, buf: Buffer) {
+  await persistWrite(`uploads/${stayId}/${filename}`, buf, mimeFromName(filename));
+  return filename;
 }
 
-export function readOperatorSignature() {
-  if (!hasOperatorSignature()) return null;
-  return readFileSync(OPERATOR_SIGNATURE);
+export async function readUpload(stayId: string, filename: string) {
+  if (filename.includes("..") || filename.includes("/") || filename.includes("\\")) return null;
+  return persistRead(`uploads/${stayId}/${filename}`);
 }
 
-export function writeOperatorSignature(buf: Buffer) {
-  ensureDirs();
-  writeFileSync(OPERATOR_SIGNATURE, buf);
+export async function hasOperatorSignature() {
+  return Boolean(await persistRead(SIGNATURE_FILE));
 }
 
-export function resolveUpload(stayId: string, filename: string) {
-  const full = path.join(UPLOADS, stayId, filename);
-  const rel = path.relative(UPLOADS, full);
-  if (rel.startsWith("..") || path.isAbsolute(rel)) return null;
-  if (!existsSync(full)) return null;
-  return full;
+export async function readOperatorSignature() {
+  return persistRead(SIGNATURE_FILE);
 }
 
-export { UPLOADS };
+export async function writeOperatorSignature(buf: Buffer) {
+  await persistWrite(SIGNATURE_FILE, buf, "image/png");
+}

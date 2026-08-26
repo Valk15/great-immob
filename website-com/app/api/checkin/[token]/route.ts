@@ -13,7 +13,7 @@ export async function POST(
   { params }: { params: Promise<{ token: string }> },
 ) {
   const { token } = await params;
-  const stay = getStayByToken(token);
+  const stay = await getStayByToken(token);
   if (!stay) {
     return NextResponse.json({ error: guestCopy("fr").errors.invalid }, { status: 404 });
   }
@@ -85,7 +85,7 @@ export async function POST(
   }
 
   const rectoExt = extFromType(idRecto.type, "jpg");
-  stay.files.idRecto = writeStayFile(
+  stay.files.idRecto = await writeStayFile(
     stay.id,
     `id-recto.${rectoExt}`,
     Buffer.from(await idRecto.arrayBuffer()),
@@ -97,14 +97,18 @@ export async function POST(
       return NextResponse.json({ error: t.versoHeavy }, { status: 400 });
     }
     const versoExt = extFromType(idVerso.type, "jpg");
-    stay.files.idVerso = writeStayFile(
+    stay.files.idVerso = await writeStayFile(
       stay.id,
       `id-verso.${versoExt}`,
       Buffer.from(await idVerso.arrayBuffer()),
     );
   }
 
-  stay.files.guestSignature = writeStayFile(stay.id, "signature-locataire.png", dataUrlToBuffer(signature));
+  stay.files.guestSignature = await writeStayFile(
+    stay.id,
+    "signature-locataire.png",
+    dataUrlToBuffer(signature),
+  );
   stay.guest = {
     nom,
     prenom,
@@ -118,13 +122,13 @@ export async function POST(
     submittedAt: new Date().toISOString(),
   };
   stay.cohabitants = cohabitants;
-  if (hasOperatorSignature()) {
+  if (await hasOperatorSignature()) {
     stay.status = "countersigned";
     stay.countersignedAt = new Date().toISOString();
   } else {
     stay.status = "guest_completed";
   }
-  saveStay(stay);
+  await saveStay(stay);
   try {
     await rebuildDocuments(stay);
   } catch (err) {

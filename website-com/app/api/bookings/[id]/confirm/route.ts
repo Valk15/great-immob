@@ -11,7 +11,7 @@ export async function POST(
   if (denied) return denied;
   const { id } = await ctx.params;
   try {
-    const booking = confirmBooking(id);
+    const booking = await confirmBooking(id);
     return relativeRedirect(`/dashboard/stays/${booking.stayId}?created=1`);
   } catch (err) {
     return NextResponse.json(

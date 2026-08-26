@@ -349,7 +349,7 @@ export async function buildContractPdf(
     color: CHAMPAGNE,
   }, ar);
 
-  const opSig = await embedPngMaybe(pdf, readOperatorSignature());
+  const opSig = await embedPngMaybe(pdf, await readOperatorSignature());
   const guestSig = await embedPngMaybe(pdf, guestSignature);
 
   hairline(page, left + 20, left + 20 + boxW, signY, MUTED);

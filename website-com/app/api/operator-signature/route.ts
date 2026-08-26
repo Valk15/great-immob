@@ -10,8 +10,8 @@ import {
 export async function GET() {
   const denied = await requireOperatorApi();
   if (denied) return denied;
-  const buf = readOperatorSignature();
-  if (!buf || !hasOperatorSignature()) {
+  const buf = await readOperatorSignature();
+  if (!buf || !(await hasOperatorSignature())) {
     return NextResponse.json({ error: "Aucune signature" }, { status: 404 });
   }
   return new NextResponse(new Uint8Array(buf), {
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   const drawn = String(form.get("signatureData") || "");
 
   if (drawn.startsWith("data:image/png")) {
-    writeOperatorSignature(dataUrlToBuffer(drawn));
+    await writeOperatorSignature(dataUrlToBuffer(drawn));
     return NextResponse.json({ ok: true });
   }
 
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     if (file.size > 4 * 1024 * 1024) {
       return NextResponse.json({ error: "Signature trop lourde" }, { status: 400 });
     }
-    writeOperatorSignature(Buffer.from(await file.arrayBuffer()));
+    await writeOperatorSignature(Buffer.from(await file.arrayBuffer()));
     return NextResponse.json({ ok: true });
   }
 

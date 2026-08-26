@@ -11,12 +11,12 @@ export async function POST(
   const denied = await requireOperatorApi();
   if (denied) return denied;
   const { id } = await params;
-  const stay = getStay(id);
+  const stay = await getStay(id);
   if (!stay) return NextResponse.json({ error: "Séjour introuvable" }, { status: 404 });
   if (stay.status === "awaiting_guest") {
     return NextResponse.json({ error: "Le voyageur n'a pas encore signé." }, { status: 400 });
   }
-  if (!hasOperatorSignature()) {
+  if (!(await hasOperatorSignature())) {
     return NextResponse.json(
       { error: "Uploadez d'abord votre signature dans le tableau de bord." },
       { status: 400 },
