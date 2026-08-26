@@ -66,17 +66,20 @@ export function GuestCheckin({ stay, closed }: { stay: Stay; closed: boolean }) 
         </p>
 
         {closed ? (
-          <div className="mt-8 border border-mist bg-white p-6 text-center">
-            <p className="text-sm text-ink/70">{copy.closed}</p>
+          <div className="mt-8 border border-mist bg-white p-8 text-center">
+            <p className="text-[11px] uppercase tracking-brand text-champagne">{copy.doneEyebrow}</p>
+            <h2 className="mt-3 font-display text-3xl">{copy.doneTitle}</h2>
+            <p className="mt-3 text-sm text-ink/70">
+              {stay.status === "countersigned" ? copy.doneBoth : copy.doneGuestOnly}
+            </p>
             <ContractDownload token={stay.token} label={copy.download} hint={copy.downloadHint} />
             <p className="mt-4 text-xs text-ink/50">{copy.whatsapp}</p>
           </div>
-        ) : null}
-        {stay.status === "awaiting_guest" ? (
+        ) : (
           <div className="mt-8">
             <CheckinForm stay={stay} copy={copy} locale={locale} />
           </div>
-        ) : null}
+        )}
       </div>
     </main>
   );

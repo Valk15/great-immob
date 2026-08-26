@@ -1,12 +1,35 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { formatPhone } from "@/lib/countries";
 import { dataUrlToBuffer, extFromType, rebuildDocuments, writeStayFile } from "@/lib/documents";
 import { guestCopy, nationalityForLocale, parseLocale } from "@/lib/i18n";
 import { getStayByToken, hasOperatorSignature, saveStay } from "@/lib/store";
-import type { Cohabitant, GuestGender } from "@/lib/types";
+import type { Cohabitant, GuestGender, Stay } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
+
+function stayPayload(stay: Stay, token: string) {
+  const submitted = Boolean(stay.guest?.submittedAt || stay.files.guestSignature);
+  return {
+    ok: true,
+    status: stay.status,
+    submitted,
+    contractUrl: `/api/checkin/${token}/contrat`,
+    signedBoth: stay.status === "countersigned",
+  };
+}
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ token: string }> },
+) {
+  const { token } = await params;
+  const stay = await getStayByToken(token);
+  if (!stay) {
+    return NextResponse.json({ error: guestCopy("fr").errors.invalid }, { status: 404 });
+  }
+  return NextResponse.json(stayPayload(stay, token));
+}
 
 export async function POST(
   request: Request,
@@ -22,12 +45,8 @@ export async function POST(
   const locale = parseLocale(form.get("locale") || stay.guest?.locale);
   const t = guestCopy(locale).errors;
 
-  if (stay.guest && stay.files.contractPdf) {
-    return NextResponse.json({
-      ok: true,
-      contractUrl: `/api/checkin/${token}/contrat`,
-      signedBoth: stay.status === "countersigned",
-    });
+  if (stay.guest && (stay.files.guestSignature || stay.files.contractPdf)) {
+    return NextResponse.json(stayPayload(stay, token));
   }
   if (stay.status === "countersigned") {
     return NextResponse.json({ error: t.closed }, { status: 400 });
@@ -129,15 +148,14 @@ export async function POST(
     stay.status = "guest_completed";
   }
   await saveStay(stay);
-  try {
-    await rebuildDocuments(stay);
-  } catch (err) {
-    console.error(err);
-  }
-
-  return NextResponse.json({
-    ok: true,
-    contractUrl: `/api/checkin/${token}/contrat`,
-    signedBoth: stay.status === "countersigned",
+  const forPdf: Stay = JSON.parse(JSON.stringify(stay)) as Stay;
+  after(async () => {
+    try {
+      await rebuildDocuments(forPdf);
+    } catch (err) {
+      console.error(err);
+    }
   });
+
+  return NextResponse.json(stayPayload(stay, token));
 }

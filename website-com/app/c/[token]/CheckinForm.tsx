@@ -21,6 +21,7 @@ export function CheckinForm({
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const padRef = useRef<SignaturePadHandle>(null);
+  const sendingRef = useRef(false);
   const [step, setStep] = useState(0);
   const [signature, setSignature] = useState("");
   const [idFront, setIdFront] = useState<File | null>(null);
@@ -74,6 +75,7 @@ export function CheckinForm({
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (busy || sendingRef.current) return;
     setError("");
     const formEl = formRef.current;
     if (!formEl) return;
@@ -93,6 +95,7 @@ export function CheckinForm({
       return;
     }
 
+    sendingRef.current = true;
     setBusy(true);
     const form = new FormData(formEl);
     const rectoInput = formEl.elements.namedItem("idRecto");
@@ -101,25 +104,66 @@ export function CheckinForm({
       idFront || (rectoInput instanceof HTMLInputElement ? rectoInput.files?.[0] : undefined);
     const versoFile =
       idBack || (versoInput instanceof HTMLInputElement ? versoInput.files?.[0] : undefined);
-    if (rectoFile) form.set("idRecto", rectoFile);
-    if (versoFile) form.set("idVerso", versoFile);
+    if (rectoFile) form.set("idRecto", await compactImage(rectoFile));
+    if (versoFile) form.set("idVerso", await compactImage(versoFile));
     form.set("signature", ink);
     form.set("locale", locale);
 
-    try {
-      const res = await fetch(`/api/checkin/${stay.token}`, { method: "POST", body: form });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(typeof json.error === "string" ? json.error : copy.sendFail);
-        setBusy(false);
-        return;
-      }
+    let settled = false;
+    const succeed = (both?: boolean) => {
+      if (settled) return;
+      settled = true;
+      sendingRef.current = false;
+      setSignedBoth(both !== false);
       setDone(true);
-      setSignedBoth(json.signedBoth !== false);
+      setBusy(false);
+    };
+    const fail = (msg?: string) => {
+      if (settled) return;
+      settled = true;
+      sendingRef.current = false;
+      setError(typeof msg === "string" && msg ? msg : copy.sendFail);
+      setBusy(false);
+    };
+
+    void (async () => {
+      for (let i = 0; i < 24; i++) {
+        await sleep(1500);
+        if (settled) return;
+        try {
+          const status = await fetch(`/api/checkin/${stay.token}`, { cache: "no-store" });
+          const json = (await status.json().catch(() => ({}))) as {
+            submitted?: boolean;
+            signedBoth?: boolean;
+          };
+          if (json.submitted) succeed(json.signedBoth);
+        } catch {
+          /* keep polling */
+        }
+      }
+      if (!settled) fail();
+    })();
+
+    const ctrl = new AbortController();
+    const abortTimer = window.setTimeout(() => ctrl.abort(), 45000);
+    try {
+      const res = await fetch(`/api/checkin/${stay.token}`, {
+        method: "POST",
+        body: form,
+        signal: ctrl.signal,
+      });
+      const json = (await res.json().catch(() => ({}))) as { error?: string; signedBoth?: boolean };
+      if (res.ok) {
+        succeed(json.signedBoth);
+      } else {
+        await sleep(3000);
+        if (!settled) fail(json.error);
+      }
     } catch {
-      setError(copy.sendFail);
+      /* timeout or network: polling decides success/fail */
+    } finally {
+      window.clearTimeout(abortTimer);
     }
-    setBusy(false);
   }
 
   if (done) {
@@ -280,7 +324,8 @@ export function CheckinForm({
             <button
               type="button"
               onClick={() => setStep((s) => s - 1)}
-              className="rounded-gi border border-ink px-4 py-3 text-sm"
+              disabled={busy}
+              className="rounded-gi border border-ink px-4 py-3 text-sm disabled:opacity-50"
             >
               {copy.back}
             </button>
@@ -306,6 +351,34 @@ export function CheckinForm({
       </div>
     </form>
   );
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function compactImage(file: File) {
+  if (!file.type.startsWith("image/") && !file.type.endsWith("heic") && !file.type.endsWith("heif")) {
+    return file;
+  }
+  try {
+    const bitmap = await createImageBitmap(file);
+    const maxEdge = 1600;
+    const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.82));
+    if (!blob || blob.size < 80) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" });
+  } catch {
+    return file;
+  }
 }
 
 function Field({
